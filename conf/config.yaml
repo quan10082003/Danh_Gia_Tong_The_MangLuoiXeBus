@@ -1,0 +1,33 @@
+data:
+  matsim:
+    static_input:
+      network: "data/matsim/static_input/network.xml"
+      plan: "data/matsim/static_input/plans_scale0.375true.xml"
+      zones:
+        output_path: "data/matsim/static_input/zones.json"
+        
+      grid:
+        rows: 20
+        cols: 20
+
+    before:
+      input:
+        transit_schedule: "data/matsim/before/input/transit_schedule.xml"
+        transit_vehicle: "data/matsim/before/input/transitVehicles.xml"
+      output:
+        events: "data/matsim/before/output/output_events.xml"
+        trips: "data/matsim/before/output/output_trips.csv"
+        plan: "data/matsim/before/output/output_plans.xml"
+        legs: "data/matsim/before/output/output_legs.csv"
+
+    after:
+      input:
+        transit_schedule: "data/matsim/after/input/transit_schedule.xml"
+        transit_vehicle: "data/matsim/after/input/transitVehicles.xml"
+      output:
+        events: "data/matsim/after/output/output_events.xml"
+        trips: "data/matsim/after/output/output_trips.csv"
+        plan: "data/matsim/after/output/output_plans.xml"
+        legs: "data/matsim/after/output/output_legs.csv"
+test:
+  output: "data/test_output"
