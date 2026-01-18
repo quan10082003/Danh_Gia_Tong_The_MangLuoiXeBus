@@ -20,21 +20,52 @@ class QTripData:
         self.start_time = start_time
         self.main_mode = main_mode
         self.veh_id_list: List[str] = []
+        self.veh_type_list: List[str] = []
 
     def to_dict(self, travel_time: float):
         return {
             "personId": self.person_id,
-            "startTime": self.start_time,
-            "travelTime": travel_time,
+            "vehTypeList": "|".join(self.veh_type_list),
+            "vehIDList": "|".join(self.veh_id_list),
             "mainMode": self.main_mode,
-            "vehIDList": "|".join(self.veh_id_list)
+            "startTime": self.start_time,
+            "travelTime": travel_time
+           
+            
+            
         }
 
 class RidershipPrepareData:
-    def __init__(self, events_path: str):
+    def __init__(self, events_path: str, vehicle_type_path: str):
         self.events_path = events_path
+        self.vehicle_path = vehicle_type_path
         self.ridership_data: List[Dict] = []
         self._trip_map: Dict[str, QTripData] = {}
+        self.veh_id_to_type_map: Dict[str, str] = {}
+        self._load_vehicle_types()
+
+    def _load_vehicle_types(self):
+        """Loads vehicle types from the CSV file into a dictionary."""
+        print(f"Loading vehicle types from: {self.vehicle_path}")
+        if not os.path.exists(self.vehicle_path):
+            print(f"Warning: Vehicle type file not found at {self.vehicle_path}. Vehicle types will be empty.")
+            return
+            
+        try:
+            df = pd.read_csv(self.vehicle_path)
+            # Ensure columns exist. Assuming columns are 'id' and 'type_id' or similar based on previous context, 
+            # but let's check standard names usually produced. 
+            # The previous tool output showed keys from Vehicle class: 'id', 'type_id'.
+            if 'id' in df.columns and 'type_id' in df.columns:
+                 self.veh_id_to_type_map = pd.Series(df.type_id.values, index=df.id).to_dict()
+            else:
+                 print(f"Warning: Columns 'id' and 'type_id' not found in {self.vehicle_path}. Finding first two columns.")
+                 if df.shape[1] >= 2:
+                     self.veh_id_to_type_map = pd.Series(df.iloc[:, 1].values, index=df.iloc[:, 0]).to_dict()
+                 
+            print(f"Loaded {len(self.veh_id_to_type_map)} vehicle mappings.")
+        except Exception as e:
+            print(f"Error loading vehicle types: {e}")
 
     def process(self):
         """
@@ -89,6 +120,10 @@ class RidershipPrepareData:
             if person_id in self._trip_map:
                 veh_id = elem.get("vehicle")
                 self._trip_map[person_id].veh_id_list.append(veh_id)
+                
+                # Lookup vehicle type
+                veh_type = self.veh_id_to_type_map.get(str(veh_id), "unknown")
+                self._trip_map[person_id].veh_type_list.append(veh_type)
 
         # 3. ActivityStartEvent -> type="actstart"
         elif e_type == "actstart":

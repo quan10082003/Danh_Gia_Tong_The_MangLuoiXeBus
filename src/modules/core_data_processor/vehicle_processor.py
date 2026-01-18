@@ -20,9 +20,15 @@ class VehicleData:
         tree = ET.parse(self.vehicle_path)
         root = tree.getroot()
         
-        for veh in root.findall("vehicle"):
-            veh_id = veh.get('id')
-            veh_type_id = veh.get('type')
+        # Handle namespaces by inspecting the tag name
+        # MATSim XML files usually have namespaces, causing findall('vehicle') to fail
+        for child in root:
+            # Extract tag name without namespace (e.g., {url}vehicle -> vehicle)
+            tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+            
+            if tag == 'vehicle':
+                veh_id = child.get('id')
+                veh_type_id = child.get('type')
                 self.vehicle_list.append(Vehicle(veh_id, veh_type_id))
             
         # Save Outputs

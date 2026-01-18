@@ -5,7 +5,7 @@ import shutil
 from src.config_loader import load_config
 from src.modules.core_data_processor.vehicle_processor import VehicleData
 
-test_name = os.path.basename(__file__)
+test_name = "test_vehicle_processor"
 
 def main():
     # Setup paths
