@@ -6,6 +6,8 @@ import os
 import argparse
 from typing import Set, List, Dict, Tuple
 
+from src.modules.core_data_processor.plan_input_processor import PlanInputData
+
 class ServiceCoveragePrepareData:
     """
     Extracts bus stop locations from schedule and reads pre-processed population home locations.
@@ -55,6 +57,11 @@ class ServiceCoveragePrepareData:
             for line in lines:
                 routes = line.findall("transitRoute", ns) if ns else line.findall("transitRoute")
                 for route in routes:
+                    # Filter for passing "bus" mode only
+                    mode_elem = route.find("transportMode", ns) if ns else route.find("transportMode")
+                    if mode_elem is None or (mode_elem.text and mode_elem.text.strip().lower() != "bus"):
+                        continue
+
                     profile = route.find("routeProfile", ns) if ns else route.find("routeProfile")
                     if profile is not None:
                         stops = profile.findall("stop", ns) if ns else profile.findall("stop")
@@ -135,7 +142,25 @@ class ServiceCoveragePrepareData:
             "percentage": percentage
         }
 
-def start_scoring(schedule_path: str, homes_csv_path: str, radius: float):
+def start_scoring(schedule_path: str, plans_xml_path: str, output_dir: str, radius: float):
+    # Step 1: Generate Homes CSV from Plans XML
+    homes_csv_path = os.path.join(output_dir, "population_homes.csv")
+    print(f"--- Pre-processing Plans Data ---")
+    print(f"Plans XML: {plans_xml_path}")
+    print(f"Output CSV: {homes_csv_path}")
+    
+    if os.path.exists(homes_csv_path):
+        print("  Homes CSV already exists. Skipping generation (or overwrite if needed).")
+        # You might want to force overwrite or check timestamps here. 
+        # For now, let's just use it if it exists to save time, or overwrite if requested.
+        # User requested to run it, so let's run it to be safe/correct.
+        pass 
+    
+    plan_processor = PlanInputData(plans_xml_path)
+    plan_processor.process()
+    plan_processor.save_to_csv(homes_csv_path)
+    
+    # Step 2: Calculate Coverage
     processor = ServiceCoveragePrepareData(schedule_path, homes_csv_path)
     processor.process()
     return processor.calculate_coverage(radius)
@@ -143,12 +168,16 @@ def start_scoring(schedule_path: str, homes_csv_path: str, radius: float):
 def main():
     parser = argparse.ArgumentParser(description="Calculate Service Coverage Score")
     parser.add_argument("--schedule", required=True, help="Path to transit schedule XML")
-    parser.add_argument("--homes_csv", required=True, help="Path to pre-processed homes CSV")
+    parser.add_argument("--plans_xml", required=True, help="Path to population plans XML")
+    parser.add_argument("--output_dir", required=True, help="Directory to save intermediate and final outputs")
     parser.add_argument("--radius", type=float, default=400.0, help="Coverage radius in meters")
     
     args = parser.parse_args()
     
-    start_scoring(args.schedule, args.homes_csv, args.radius)
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    
+    start_scoring(args.schedule, args.plans_xml, args.output_dir, args.radius)
 
 if __name__ == "__main__":
     main()

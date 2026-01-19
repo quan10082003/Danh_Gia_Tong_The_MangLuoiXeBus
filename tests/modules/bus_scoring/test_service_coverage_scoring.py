@@ -1,4 +1,4 @@
-
+#BEFORE
 import os
 import sys
 import shutil
@@ -10,7 +10,8 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 from src.config_loader import load_config
-from src.modules.bus_scoring.service_coverage_scoring import ServiceCoveragePrepareData
+from src.modules.bus_scoring.service_coverage_scoring import start_scoring
+from src.modules.core_data_processor.plan_input_processor import PlanInputData
 
 test_name = "test_service_coverage_scoring"
 
@@ -34,18 +35,18 @@ def main():
     if os.path.exists(TEST_OUTPUT_DIR):
         shutil.rmtree(TEST_OUTPUT_DIR)
     os.makedirs(TEST_OUTPUT_DIR, exist_ok=True)
-        
-    print(f"--- Step 1: Initialize Coverage Processor ---")
-    print(f"Schedule: {SCHEDULE_PATH}")
-    print(f"Plans: {PLANS_PATH}")
+
+    # Step 0: Pre-process Plans to Homes CSV happens inside start_scoring now
     
-    processor = ServiceCoveragePrepareData(SCHEDULE_PATH, PLANS_PATH)
+    print(f"--- Running Service Coverage Scoring ---")
     
-    print("\n--- Step 2: Process Data (Extract Stops and Homes) ---")
-    processor.process()
+    # We can call start_scoring directly which wraps everything
+    result = start_scoring(SCHEDULE_PATH, PLANS_PATH, TEST_OUTPUT_DIR, radius=400.0)
     
-    print("\n--- Step 3: Calculate Coverage (Radius 400m) ---")
-    result = processor.calculate_coverage(radius=400.0)
+    # Save to JSON
+    json_output_path = os.path.join(TEST_OUTPUT_DIR, "coverage_score.json")
+    with open(json_output_path, 'w', encoding='utf-8') as f:
+        json.dump(result, f, indent=4)
     
     # Save to JSON
     json_output_path = os.path.join(TEST_OUTPUT_DIR, "coverage_score.json")
